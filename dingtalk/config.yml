@@ -1,0 +1,12 @@
+timeout: 5s
+templates:
+  - contrib/templates/legacy/template.tmpl
+
+default_message:
+  title: '{{ template "legacy.title" . }}'
+  text: '{{ template "legacy.content" . }}'
+
+targets:
+  webhook1:
+    url: https://oapi.dingtalk.com/robot/send?access_token=4e3733300a4cc971eac244721b080db5ca37128d7c1a9170039e5421a242c505
+    secret: SEC21d6e314e2567c77edef905e466c3af2d5226e61cc626deb04d6c2ff18f102de

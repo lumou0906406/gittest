@@ -1,0 +1,144 @@
+groups:
+  # ==================== 主机层告警 ====================
+  - name: node_alerts
+    rules:
+      # 服务器节点宕机告警：node_exporter 抓取失败持续 15s 触发
+      - alert: NodeInstanceDown
+        expr: up{job="node_exporter"} == 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: "服务器 {{ $labels.instance }} 节点失联"
+          description: "节点 {{ $labels.instance }} node_exporter 采集失败，服务器可能宕机或网络中断"
+
+      # 磁盘使用率大于 80% 告警，排除 tmpfs、sys、proc 虚拟文件系统
+      - alert: DiskUsageHigh
+        expr: (1 - node_filesystem_avail_bytes{fstype!="tmpfs",mountpoint!~"^/sys|^/proc"} / node_filesystem_size_bytes{fstype!="tmpfs",mountpoint!~"^/sys|^/proc"}) * 100 > 80
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "节点 {{ $labels.instance }} 磁盘使用率过高"
+          description: "节点 {{ $labels.instance }} 磁盘分区 {{ $labels.mountpoint }} 使用率超过 80%，当前使用率：{{ $value | printf \"%.2f\" }}%"
+
+      # 内存使用率超过 80% 告警
+      - alert: NodeMemoryHigh
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 80
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "节点 {{ $labels.instance }} 内存使用率过高"
+          description: "节点 {{ $labels.instance }} 内存使用率 {{ $value | printf \"%.2f\" }}%，内存资源紧张"
+
+      # CPU 1 分钟负载告警：1 分钟负载 > 主机 CPU 核心数
+      - alert: NodeCPULoadHigh
+        expr: node_load1 > count by(instance) (node_cpu_seconds_total{mode="idle"})
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "节点 {{ $labels.instance }} CPU负载过高"
+          description: "节点 {{ $labels.instance }} 一分钟负载 {{ $value | printf \"%.2f\" }}，CPU 压力过大"
+
+  # ==================== MySQL 告警 ====================
+  - name: mysql_alerts
+    rules:
+      # MySQL 宕机：连接失败持续 1 分钟触发
+      - alert: MySQLDown
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL {{ $labels.instance }} 宕机"
+          description: "MySQL 实例 {{ $labels.instance }} 已无法连接，持续 1 分钟，请立即检查"
+
+      # MySQL 连接数使用率超过 80%
+      - alert: MySQLTooManyConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL {{ $labels.instance }} 连接数过高"
+          description: "MySQL 连接数使用率超过 80%，当前值 {{ $value | printf \"%.2f\" }}"
+
+      # MySQL 慢查询数量激增（5 分钟内慢查询超过 10 条）
+      - alert: MySQLSlowQueriesHigh
+        expr: increase(mysql_global_status_slow_queries[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL {{ $labels.instance }} 慢查询过多"
+          description: "MySQL 实例 {{ $labels.instance }} 5 分钟内慢查询增长 {{ $value }} 条，请检查慢 SQL"
+
+      # MySQL 主从复制延迟（如果有主从架构）
+      - alert: MySQLReplicationLag
+        expr: mysql_slave_status_seconds_behind_master > 30
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL {{ $labels.instance }} 主从延迟过高"
+          description: "MySQL 主从延迟 {{ $value }} 秒，超过 30 秒阈值"
+
+  # ==================== K8s 层告警 ====================
+  - name: k8s_alerts
+    rules:
+      # K8s Node 未就绪告警
+      - alert: K8sNodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="false"} == 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "K8s节点 {{ $labels.node }} 未就绪"
+          description: "Kubernetes 节点 {{ $labels.node }} 状态未就绪，请检查节点"
+
+      # Deployment 副本就绪数不等于期望副本告警
+      - alert: DeploymentReplicaNotReady
+        expr: kube_deployment_status_replicas_ready != kube_deployment_spec_replicas
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Deployment副本异常 {{ $labels.namespace }}/{{ $labels.deployment }}"
+          description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} 就绪副本与期望副本不一致，请检查"
+
+      # Pod 非 Running 状态告警
+      - alert: PodNotRunning
+        expr: kube_pod_status_phase{phase!="Running"} == 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pod异常 {{ $labels.namespace }}/{{ $labels.pod }}"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} 当前状态: {{ $labels.phase }}"
+      
+
+
+        # ==================== Nginx 告警 ====================
+  - name: nginx_alerts
+    rules:
+      # Nginx 宕机
+      - alert: NginxDown
+        expr: nginx_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Nginx {{ $labels.instance }} 宕机"
+          description: "Nginx 实例 {{ $labels.instance }} 已无法连接，持续 1 分钟"
+
+      # Nginx 活跃连接数过高
+      - alert: NginxHighActiveConnections
+        expr: nginx_connections_active > 1000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nginx {{ $labels.instance }} 活跃连接数过高"
+          description: "Nginx 活跃连接数 {{ $value }}，超过 1000 阈值，请检查流量"
