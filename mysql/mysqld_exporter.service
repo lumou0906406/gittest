@@ -1,0 +1,17 @@
+[Unit]
+Description=MySQL Exporter for Prometheus
+After=network.target mysqld.service
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/mysqld_exporter \
+    --config.my-cnf=/etc/mysqld_exporter/.my.cnf \
+    --collect.info_schema.processlist \
+    --collect.info_schema.innodb_metrics \
+    --collect.engine_innodb_status \
+    --web.listen-address=:9104
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

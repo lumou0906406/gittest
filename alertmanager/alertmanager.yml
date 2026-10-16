@@ -1,9 +1,9 @@
 global:
   resolve_timeout: 5m
   smtp_smarthost: 'smtp.qq.com:465'
-  smtp_from: '3142156341@qq.com'
-  smtp_auth_username: '3142156341@qq.com'
-  smtp_auth_password: 'eudcwitvtayjdcja'
+  smtp_from: 'email@qq.com'
+  smtp_auth_username: '@qq.com'
+  smtp_auth_password: ''
   smtp_require_tls: false
 
 # 告警路由

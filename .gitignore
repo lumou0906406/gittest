@@ -1,0 +1,6 @@
+*.log
+data/
+logs/
+*.tmp
+*.bak
+*.secret
