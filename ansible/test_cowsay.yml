@@ -1,0 +1,27 @@
+---
+- name: 测试 Ansible 自动化部署小工具
+  hosts: monitor_nodes
+  remote_user: root
+  tasks:
+
+    - name: 1. 使用 yum 模块直接从仓库安装 cowsay
+      yum:
+        name: cowsay
+        state: present
+
+    - name: 2. 创建一个自定义的问候脚本
+      copy:
+        dest: /usr/local/bin/say_hello.sh
+        content: |
+          #!/bin/bash
+          echo "你好，这是由 Ansible 自动部署的脚本！"
+          /usr/bin/cowsay "Ansible 自动化测试成功"
+        mode: '0755'
+
+    - name: 3. 执行一次这个脚本
+      command: /usr/local/bin/say_hello.sh
+      register: script_output
+
+    - name: 4. 打印脚本的执行结果
+      debug:
+        msg: "{{ script_output.stdout_lines }}"

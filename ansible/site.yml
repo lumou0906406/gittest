@@ -1,0 +1,8 @@
+---
+- name: 自动化部署中间件环境
+  hosts: monitor_nodes
+  remote_user: root
+  roles:
+    - nginx
+    - docker
+    - tomcat

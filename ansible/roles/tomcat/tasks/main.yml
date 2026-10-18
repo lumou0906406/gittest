@@ -1,0 +1,67 @@
+---
+# tasks file for roles/tomcat
+
+- name: 安装 JDK
+  yum:
+    name: java-1.8.0-openjdk-devel
+    state: present
+
+- name: 下载 Tomcat 压缩包
+  get_url:
+    url: "https://mirrors.huaweicloud.com/apache/tomcat/tomcat-9/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    dest: /tmp/tomcat.tar.gz
+    timeout: 30
+
+- name: 创建 Tomcat 安装目录
+  file:
+    path: /opt/tomcat
+    state: directory
+    mode: '0755'
+
+- name: 解压 Tomcat
+  unarchive:
+    src: /tmp/tomcat.tar.gz
+    dest: /opt/tomcat
+    remote_src: yes
+    extra_opts: [--strip-components=1]
+
+- name: 配置 JVM 环境变量 (setenv.sh)
+  template:
+    src: setenv.sh.j2
+    dest: /opt/tomcat/bin/setenv.sh
+    mode: '0755'
+
+- name: 赋予 Tomcat 脚本执行权限
+  file:
+    path: /opt/tomcat/bin
+    state: directory
+    mode: '0755'
+    recurse: yes
+
+- name: 创建 Tomcat 的 systemd 服务文件
+  copy:
+    dest: /etc/systemd/system/tomcat.service
+    content: |
+      [Unit]
+      Description=Apache Tomcat Web Application Container
+      After=network.target
+
+      [Service]
+      Type=forking
+      Environment="JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk"
+      Environment="CATALINA_PID=/opt/tomcat/temp/tomcat.pid"
+      Environment="CATALINA_HOME=/opt/tomcat"
+      Environment="CATALINA_BASE=/opt/tomcat"
+      ExecStart=/opt/tomcat/bin/startup.sh
+      ExecStop=/opt/tomcat/bin/shutdown.sh
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: 启动 Tomcat 并设置开机自启
+  systemd:
+    name: tomcat
+    state: started
+    enabled: yes
+    daemon_reload: yes

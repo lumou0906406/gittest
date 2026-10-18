@@ -1,0 +1,42 @@
+---
+# tasks file for roles/docker
+- name: 安装 Docker 依赖包
+  yum:
+    name: 
+      - yum-utils
+      - device-mapper-persistent-data
+      - lvm2
+    state: present
+
+- name: 添加 Docker 阿里云 yum 源
+  yum_repository:
+    name: docker-ce
+    description: Docker CE Stable - x86_64
+    baseurl: https://mirrors.aliyun.com/docker-ce/linux/centos/$releasever/$basearch/stable
+    gpgcheck: yes
+    gpgkey: https://mirrors.aliyun.com/docker-ce/linux/centos/gpg
+    enabled: yes
+
+- name: 安装 Docker CE 和 Docker Compose
+  yum:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+
+- name: 配置 Docker 镜像加速器
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "registry-mirrors": ["https://docker.m.daocloud.io"]
+      }
+
+- name: 启动 Docker 并设置开机自启
+  service:
+    name: docker
+    state: started
+    enabled: yes
+    daemon_reload: yes
